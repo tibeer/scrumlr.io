@@ -1,8 +1,9 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
-
+	"fmt"
 	"github.com/google/uuid"
 	"scrumlr.io/server/common/dto"
 	"scrumlr.io/server/database/types"
@@ -71,6 +72,24 @@ type VotingUpdated struct {
 func parseVotingUpdated(data interface{}) (*VotingUpdated, error) {
 	var ret *VotingUpdated
 
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(b, &ret)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+type DeletedNote struct {
+	ID          uuid.UUID `json:"note"`
+	DeleteStack bool      `json:"deleteStack"`
+}
+
+func parseDeletedNote(data interface{}) (*DeletedNote, error) {
+	var ret *DeletedNote
 	b, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -181,8 +200,14 @@ func filterVoting(voting *dto.Voting, filteredNotes []*dto.Note, userID uuid.UUI
 	return filteredVoting
 }
 
-func (boardSubscription *BoardSubscription) eventFilter(event *realtime.BoardEvent, userID uuid.UUID) *realtime.BoardEvent {
-	isMod := isModerator(userID, boardSubscription.boardParticipants)
+func (boardSubscription *BoardSubscription) eventFilter(s *Server, event *realtime.BoardEvent, userID uuid.UUID) *realtime.BoardEvent {
+	isMod, err := s.sessions.ModeratorSessionExists(context.Background(), boardSubscription.boardSettings.ID, userID)
+	if err != nil {
+		return nil
+	}
+	// ismod is too slow
+	//isMod = isModerator(userID, boardSubscription.boardParticipants)
+	fmt.Println(userID, isMod)
 	if event.Type == realtime.BoardEventColumnsUpdated {
 		columns, err := parseColumnUpdated(event.Data)
 		if err != nil {
@@ -288,14 +313,14 @@ func eventInitFilter(event InitEvent, clientID uuid.UUID) InitEvent {
 	retEvent := InitEvent{
 		Type: event.Type,
 		Data: EventData{
-			Board:       event.Data.Board,
-			Notes:       nil,
-			Reactions:   event.Data.Reactions,
-			Columns:     nil,
-			Votings:     event.Data.Votings,
-			Votes:       event.Data.Votes,
-			Sessions:    event.Data.Sessions,
-			Requests:    event.Data.Requests,
+			Board:     event.Data.Board,
+			Notes:     nil,
+			Reactions: event.Data.Reactions,
+			Columns:   nil,
+			Votings:   event.Data.Votings,
+			Votes:     event.Data.Votes,
+			Sessions:  event.Data.Sessions,
+			Requests:  event.Data.Requests,
 		},
 	}
 	// Columns

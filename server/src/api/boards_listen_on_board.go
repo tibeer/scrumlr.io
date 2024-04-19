@@ -27,14 +27,14 @@ type InitEvent struct {
 }
 
 type EventData struct {
-	Board       *dto2.Board                 `json:"board"`
-	Columns     []*dto2.Column              `json:"columns"`
-	Notes       []*dto2.Note                `json:"notes"`
-	Reactions   []*dto2.Reaction            `json:"reactions"`
-	Votings     []*dto2.Voting              `json:"votings"`
-	Votes       []*dto2.Vote                `json:"votes"`
-	Sessions    []*dto2.BoardSession        `json:"participants"`
-	Requests    []*dto2.BoardSessionRequest `json:"requests"`
+	Board     *dto2.Board                 `json:"board"`
+	Columns   []*dto2.Column              `json:"columns"`
+	Notes     []*dto2.Note                `json:"notes"`
+	Reactions []*dto2.Reaction            `json:"reactions"`
+	Votings   []*dto2.Voting              `json:"votings"`
+	Votes     []*dto2.Vote                `json:"votes"`
+	Sessions  []*dto2.BoardSession        `json:"participants"`
+	Requests  []*dto2.BoardSessionRequest `json:"requests"`
 }
 
 func (s *Server) openBoardSocket(w http.ResponseWriter, r *http.Request) {
@@ -58,14 +58,14 @@ func (s *Server) openBoardSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	initEventData := EventData{
-		Board:       board,
-		Columns:     columns,
-		Notes:       notes,
-		Reactions:   reactions,
-		Votings:     votings,
-		Votes:       votes,
-		Sessions:    sessions,
-		Requests:    requests,
+		Board:     board,
+		Columns:   columns,
+		Notes:     notes,
+		Reactions: reactions,
+		Votings:   votings,
+		Votes:     votes,
+		Sessions:  sessions,
+		Requests:  requests,
 	}
 
 	initEvent := InitEvent{
@@ -124,17 +124,17 @@ func (s *Server) listenOnBoard(boardID, userID uuid.UUID, conn *websocket.Conn, 
 	// if not already done, start listening to board changes
 	if b.subscription == nil {
 		b.subscription = s.realtime.GetBoardChannel(boardID)
-		go b.startListeningOnBoard()
+		go b.startListeningOnBoard(s)
 	}
 }
 
-func (b *BoardSubscription) startListeningOnBoard() {
+func (b *BoardSubscription) startListeningOnBoard(s *Server) {
 	for {
 		select {
 		case msg := <-b.subscription:
 			logger.Get().Debugw("message received", "message", msg)
 			for id, conn := range b.clients {
-				filteredMsg := b.eventFilter(msg, id)
+				filteredMsg := b.eventFilter(s, msg, id)
 				err := conn.WriteJSON(filteredMsg)
 				if err != nil {
 					logger.Get().Warnw("failed to send message", "message", filteredMsg, "err", err)

@@ -113,10 +113,12 @@ func (s *NoteService) UpdatedNotes(board uuid.UUID, notes []database.Note) {
 	}
 }
 func (s *NoteService) DeletedNote(user, board, note uuid.UUID, votes []database.Vote, deleteStack bool) {
+	//todo: send more info into board event
 	noteData := map[string]interface{}{
 		"note":        note,
 		"deleteStack": deleteStack,
 	}
+
 	err := s.realtime.BroadcastToBoard(board, realtime.BoardEvent{
 		Type: realtime.BoardEventNoteDeleted,
 		Data: noteData,
